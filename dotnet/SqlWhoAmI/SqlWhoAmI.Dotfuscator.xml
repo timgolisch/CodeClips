@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE dotfuscator SYSTEM "http://www.preemptive.com/dotfuscator/dtd/dotfuscator_v1.1.dtd">
+<dotfuscator version="1.1">
+  <!--This is application generated code. Do not edit manually.-->
+  <propertylist>
+    <property name="projectdir" value="C:\Development\VB.NET\SqlWhoAmI" />
+  </propertylist>
+  <trigger>
+    <filelist>
+      <file dir="C:\Development\VB.NET\SqlWhoAmI\bin\" name="SqlWhoAmI.exe" />
+    </filelist>
+  </trigger>
+  <output>
+    <file dir="C:\Development\VB.NET\SqlWhoAmI\strongbin" />
+  </output>
+</dotfuscator>
