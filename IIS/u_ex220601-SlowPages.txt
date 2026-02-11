@@ -1,0 +1,18 @@
+time-taken	cs-uri-stem
+232305	/Server1/Products/WebForms/Reporting/PredefinedReports.aspx
+229708	/Server1/Products/WebForms/RunReport.aspx
+206787	/Server1/Products/WebForms/RunReport.aspx
+195557	/Server1/Products/WebForms/RunReport.aspx
+174677	/Server1/Products/WebForms/Inventory/OutOfStock.aspx
+173741	/Server1/Products/WebForms/RunReport.aspx
+170317	/Server1/Products/WebForms/RunReport.aspx
+168674	/Server1/Products/WebForms/Inventory/OutOfStock.aspx
+154870	/Server1/Products/WebForms/Inventory/OutOfStock.aspx
+144259	/Server1/Products/WebForms/Inventory/OutOfStock.aspx
+
+Statistics:
+-----------
+Elements processed: 435500
+Elements output:    100
+Execution time:     2.27 seconds
+

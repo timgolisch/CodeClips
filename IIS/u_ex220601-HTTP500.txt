@@ -1,0 +1,14 @@
+cs-uri-stem                                           COUNT(ALL *) 
+----------------------------------------------------- ------------
+/Server1/Products/ProductService.svc                   139
+/Server1/Products/WebForms/NameSearch/FastSearch.aspx  110
+/Server1/                                              54
+/Server1/Products/WebForms/Intake/OnSiteList.aspx      7
+/Server1/Products/WebForms/Appointment/Daily.aspx      1
+
+Statistics:
+-----------
+Elements processed: 435500
+Elements output:    5
+Execution time:     0.47 seconds
+
