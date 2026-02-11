@@ -1,0 +1,29 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <PublishUrlHistory>
+    </PublishUrlHistory>
+    <InstallUrlHistory>
+    </InstallUrlHistory>
+    <SupportUrlHistory>
+    </SupportUrlHistory>
+    <UpdateUrlHistory>
+    </UpdateUrlHistory>
+    <BootstrapperUrlHistory>
+    </BootstrapperUrlHistory>
+    <ErrorReportUrlHistory>
+    </ErrorReportUrlHistory>
+    <FallbackCulture>en-US</FallbackCulture>
+    <VerifyUploadedFiles>false</VerifyUploadedFiles>
+    <AssemblyOwner>dbo</AssemblyOwner>
+  </PropertyGroup>
+  <ProjectExtensions>
+    <VisualStudio>
+      <FlavorProperties GUID="{c252feb5-a946-4202-b1d4-9916a0590387}">
+        <DatabaseConnection Name="Data Source=gallium;Initial Catalog=Geo;Integrated Security=True" Provider="{91510608-8809-4020-8897-FBA057E22D54}" ConnectionString="01000000D08C9DDF0115D1118C7A00C04FC297EB01000000C939571F509BAC49A48E1865F3FC37F40000000002000000000003660000A80000001000000035E25CF947B6BC1557C50078DA9D0EC30000000004800000A000000010000000CEC855831935E9FD69D062283345C62688000000BE0F6165A8C925B311DD6C2829CDD1FEC342D1D1352E89E472765F2DCCE4975D91E83473A8746F80D41D0150551E9274413FC4E2637FFC3364779DA6D5A9B8CF60B249F1411C3953308D76668D31548F303F0EFF1F6CDBF6F2B64532444D086303C8B007C203288A9380C3F4A0122ADABBD6FA590E44043C13CBAB465E9601DDA1AB7E8AECCAF07914000000CCF60C3D906CC8A2D3E577A83E05B6AC56901D0F" />
+      </FlavorProperties>
+      <FlavorProperties GUID="{c252feb5-a946-4202-b1d4-9916a0590387}" Configuration="Debug|Any CPU">
+        <SQLProject DefaultDebugScript="Test Scripts\Test1.sql" />
+      </FlavorProperties>
+    </VisualStudio>
+  </ProjectExtensions>
+</Project>

@@ -1,0 +1,9 @@
+C:\temp\Library\SQL\CustomSP\bin\SpAddressHelp.dll
+C:\temp\Library\SQL\CustomSP\bin\SpAddressHelp.pdb
+C:\temp\Library\SQL\CustomSP\bin\SpAddressHelp.xml
+C:\temp\Library\SQL\CustomSP\obj\Debug\ResolveAssemblyReference.cache
+C:\temp\Library\SQL\CustomSP\obj\Debug\TMT.GeoCoding.MyResources.resources
+C:\temp\Library\SQL\CustomSP\obj\Debug\SpAddressHelp.vbproj.GenerateResource.Cache
+C:\temp\Library\SQL\CustomSP\obj\Debug\SpAddressHelp.dll
+C:\temp\Library\SQL\CustomSP\obj\Debug\SpAddressHelp.xml
+C:\temp\Library\SQL\CustomSP\obj\Debug\SpAddressHelp.pdb

@@ -1,0 +1,3 @@
+SELECT * FROM OPENROWSET('ADSDSOObject',
+ 'adsdatasource;', 'SELECT  cn, mail, co, distinguishedName, displayName
+ FROM ''LDAP://ad.mycompany.com/dc=mycompany,dc=com'' where objectClass = ''User'' ')

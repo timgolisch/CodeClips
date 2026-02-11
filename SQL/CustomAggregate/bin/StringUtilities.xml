@@ -1,0 +1,139 @@
+﻿<?xml version="1.0"?>
+<doc>
+<assembly>
+<name>
+StringUtilities
+</name>
+</assembly>
+<members>
+<member name="M:Microsoft.Samples.SqlServer.RegularExpression.Matches(System.Data.SqlTypes.SqlString,System.Data.SqlTypes.SqlString)">
+	<summary>
+ This method returns a table of matches, groups, and captures based on the input
+ string and pattern string provided.
+ </summary>
+	<param name="sqlInput">What to match against</param>
+	<param name="sqlPattern">What to look for</param>
+	<returns>An object which appears to be reading from SQL Server but which in fact is reading
+          from a memory based representation of the data.</returns>
+</member><member name="M:Microsoft.Samples.SqlServer.RegularExpression.FillMatchRow(System.Object,System.Int32@,System.Int32@,System.String@,System.Int32@,System.Int32@,System.String@,System.Int32@,System.String@)">
+	<summary>
+ Invoked by SQL Server when returning a row of the TVF.  Splits the MatchResult object into
+ the separate pieces of data which will form the columns of the row.
+ </summary>
+	<param name="row"></param>
+	<param name="matchID"></param>
+	<param name="matchIndex"></param>
+	<param name="matchValue"></param>
+	<param name="groupID"></param>
+	<param name="groupIndex"></param>
+	<param name="groupValue"></param>
+	<param name="captureIndex"></param>
+	<param name="captureValue"></param>
+	<remarks></remarks>
+</member><member name="M:Microsoft.Samples.SqlServer.RegularExpression.GetMatches(System.String,System.String)">
+	<summary>
+     Generates a list of Match/Group/Capture tuples represented using the
+     MatchResult struct based on the regular expression match of the input
+     string and pattern string provided.
+ </summary>
+	<param name="input">What to match</param>
+	<param name="pattern">What to look for</param>
+	<returns>A list of Match/Group/Capture tuples</returns>
+</member><member name="M:Microsoft.Samples.SqlServer.RegularExpression.Replace(System.Data.SqlTypes.SqlString,System.Data.SqlTypes.SqlString,System.Data.SqlTypes.SqlString)">
+	<summary>
+     This method performs a pattern based substitution based on the provided input string, pattern
+     string, and replacement string.
+ </summary>
+	<param name="sqlInput">The source material</param>
+	<param name="sqlPattern">How to parse the source material</param>
+	<param name="sqlReplacement">What the output should look like</param>
+	<returns></returns>
+</member><member name="T:Microsoft.Samples.SqlServer.RegularExpression">
+	<summary>
+ This class is provides regular expression operations for Transact-SQL callers
+ </summary>
+</member><member name="F:Microsoft.Samples.SqlServer.MatchResult._matchID">
+	<summary>
+ Which match this is
+ </summary>
+</member><member name="F:Microsoft.Samples.SqlServer.MatchResult._matchIndex">
+	<summary>
+ Where the match starts in the input string
+ </summary>
+</member><member name="F:Microsoft.Samples.SqlServer.MatchResult._matchValue">
+	<summary>
+ What string matched the pattern
+ </summary>
+</member><member name="F:Microsoft.Samples.SqlServer.MatchResult._groupID">
+	<summary>
+ Which matching group this is
+ </summary>
+</member><member name="F:Microsoft.Samples.SqlServer.MatchResult._groupIndex">
+	<summary>
+ Where this group starts in the input string
+ </summary>
+</member><member name="F:Microsoft.Samples.SqlServer.MatchResult._groupValue">
+	<summary>
+ What the group matched in the input string
+ </summary>
+</member><member name="F:Microsoft.Samples.SqlServer.MatchResult._captureIndex">
+	<summary>
+ Where this capture starts in the input string
+ </summary>
+</member><member name="F:Microsoft.Samples.SqlServer.MatchResult._captureValue">
+	<summary>
+ What the capture matched in the input string
+ </summary>
+</member><member name="M:Microsoft.Samples.SqlServer.MatchResult.#ctor(System.Int32,System.Int32,System.String,System.Int32,System.Int32,System.String,System.Int32,System.String)">
+	<summary>
+     A convenient constructor which fills in all the fields contained in this struct.
+ </summary>
+	<param name="matchID">Which match this is</param>
+	<param name="matchIndex">Where the match starts in the input string</param>
+	<param name="matchValue">What string matched the pattern</param>
+	<param name="groupID">Which matching group this is</param>
+	<param name="groupIndex">Where this group starts in the input string</param>
+	<param name="groupValue">What the group matched in the input string</param>
+	<param name="captureIndex">Where this capture starts in the input string</param>
+	<param name="captureValue">What the capture matched in the input string</param>
+</member><member name="T:Microsoft.Samples.SqlServer.MatchResult">
+	<summary>
+ This struct is used to represent a Match/Group/Capture tuple.  Instances of 
+ this struct are created by the GetMatches method.
+ </summary>
+</member><member name="F:Microsoft.Samples.SqlServer.Concatenate.intermediateResult">
+	<summary>
+ The variable that holds the intermediate result of the concatenation
+ </summary>
+</member><member name="M:Microsoft.Samples.SqlServer.Concatenate.Init">
+	<summary>
+ Initialize the internal data structures
+ </summary>
+</member><member name="M:Microsoft.Samples.SqlServer.Concatenate.Accumulate(System.Data.SqlTypes.SqlString)">
+	<summary>
+ Accumulate the next value, nop if the value is null
+ </summary>
+	<param name="value"></param>
+</member><member name="M:Microsoft.Samples.SqlServer.Concatenate.Merge(Microsoft.Samples.SqlServer.Concatenate)">
+	<summary>
+ Merge the partially computed aggregate with this aggregate.
+ </summary>
+	<param name="other"></param>
+</member><member name="M:Microsoft.Samples.SqlServer.Concatenate.Terminate">
+	<summary>
+ Called at the end of aggregation, to return the results of the aggregation
+ </summary>
+	<returns></returns>
+</member><member name="M:Microsoft.Samples.SqlServer.StringSplitter.Split(System.Data.SqlTypes.SqlString)">
+	<summary>
+ The streaming table-valued function used to split the string into a relation
+ </summary>
+	<param name="argument"></param>
+	<returns></returns>
+</member><member name="M:Microsoft.Samples.SqlServer.StringSplitter.#ctor">
+	<summary>
+ Don't allow callers to create instances of this class
+ </summary>
+</member>
+</members>
+</doc>
