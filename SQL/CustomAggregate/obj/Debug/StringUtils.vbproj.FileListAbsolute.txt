@@ -1,9 +1,0 @@
-C:\temp\Library\SQL\CustomAggregate\obj\Debug\ResolveAssemblyReference.cache
-C:\temp\Library\SQL\CustomAggregate\obj\Debug\Microsoft.Samples.SqlServer.MyResources.resources
-C:\temp\Library\SQL\CustomAggregate\obj\Debug\StringUtils.vbproj.GenerateResource.Cache
-C:\temp\Library\SQL\CustomAggregate\bin\StringUtilities.dll
-C:\temp\Library\SQL\CustomAggregate\bin\StringUtilities.pdb
-C:\temp\Library\SQL\CustomAggregate\bin\StringUtilities.xml
-C:\temp\Library\SQL\CustomAggregate\obj\Debug\StringUtilities.dll
-C:\temp\Library\SQL\CustomAggregate\obj\Debug\StringUtilities.xml
-C:\temp\Library\SQL\CustomAggregate\obj\Debug\StringUtilities.pdb
