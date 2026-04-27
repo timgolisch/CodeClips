@@ -35,8 +35,7 @@ namespace ReportViewer.Properties {
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.SpecialSettingAttribute(global::System.Configuration.SpecialSetting.ConnectionString)]
-        [global::System.Configuration.DefaultSettingValueAttribute("Provider=SQLOLEDB;Server=HCT231MWDBRD901,1437;Database=DASU_DEV;User Id=WEB_DASU;" +
-            "Password=d@suw3B!;")]
+        [global::System.Configuration.DefaultSettingValueAttribute("Provider=SQLOLEDB;Server=localhost;Database=northwind")]
         public string DsnReport {
             get {
                 return ((string)(this["DsnReport"]));
