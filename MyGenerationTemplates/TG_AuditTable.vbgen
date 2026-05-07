@@ -1,0 +1,282 @@
+﻿##|TYPE Template
+##|UNIQUEID f96a9eec-6121-46c4-8fa1-4ad5c6ead890
+##|TITLE [TG]Audit Table & Trigger
+##|NAMESPACE SQLServer.Trace
+##|SOURCE_TYPE Source
+##|OUTPUT_LANGUAGE C#
+##|COMMENTS_BEGIN
+see dOOdads
+##|COMMENTS_END
+##|GUI_ENGINE Microsoft Script
+##|GUI_LANGUAGE VBScript
+##|GUI_BEGIN
+Dim cmbDatabases
+Dim lstTables
+
+Sub setup()
+
+	If Not input.Contains("lstTables") Or Not input.Contains("txtPath") Then
+
+		ui.Title = "Generate Audit Tables"
+		ui.Width  = 330
+		ui.Height = 470
+
+		' Grab default output path
+		Dim sOutputPath
+		sOutputPath = ""
+		If input.Contains("defaultOutputPath") Then 
+			sOutputPath = input.Item("defaultOutputPath") + "\"
+		End If
+
+		ui.AddLabel "lblPath", "Output file path: ",  "Select the output path."
+		ui.AddTextBox "txtPath", sOutputPath, "Select the Output Path."
+		ui.AddFilePicker "btnPath", "Select Path", "Select the Output Path.", "txtPath", true
+
+		'ui.AddLabel "lblNamespace", "Namespace: ",  "Provide your objects namespace."
+		'ui.AddTextBox "txtNamespace", "Your.Namespace", "Provide your objects namespace."
+
+		' List Databases in a ComboBox
+		ui.AddLabel "lblDatabases", "Select a database:", "Select a database in the dropdown below."
+		Set cmbDatabases = ui.AddComboBox("cmbDatabase", "Select a database.")
+		'cmbDatabases.Select("HomeDatabase")
+		
+		' List Tables in a listbox
+		ui.AddLabel "lblTables", "Select tables:", "Select tables from the listbox below."
+		Set lstTables = ui.AddListBox ("lstTables", "Select tables:")
+		'lstTables.IsMultiSelect = false
+		lstTables.Select("FranContact")
+		lstTables.Height = 180
+
+		'ui.AddLabel "lblLanguage", "Select a language:", "Select a Language for Column Mappings."
+		'Set cmbLanguages = ui.AddComboBox("cmbLanguages", "Select a Language.")
+		'cmbLanguages.Item("C#")              = "C#"
+		'cmbLanguages.Item("C# System Types") = "C# System Types"
+		'cmbLanguages.SelectedValue = "C#"
+
+		' Attach the onchange event to the cmbDatabases control.
+		setupDatabaseDropdown cmbDatabases
+		cmbDatabases.AttachEvent "onchange", "cmbDatabases_onchange"
+		
+		ui.ShowGUI = true
+	Else 
+		ui.ShowGUI = false
+	End if
+
+End Sub
+
+Sub setupDatabaseDropdown(cmbDatabases)
+	cmbDatabases.BindData MyMeta.Databases
+
+	If Not MyMeta.DefaultDatabase Is Nothing Then
+		cmbDatabases.SelectedValue = MyMeta.DefaultDatabase.Name
+		bindTables cmbDatabases.SelectedValue
+	End If
+End Sub
+
+Sub bindTables(sDatabase)
+	Set db = MyMeta.Databases(sDatabase)
+	lstTables.BindData(db.Tables)
+End Sub
+
+' Event Handler
+Sub cmbDatabases_onchange(control)
+	Set cmbDatabases = ui.item("cmbDatabase")
+	bindTables cmbDatabases.SelectedText
+End Sub
+##|GUI_END
+##|BODY_MODE Markup
+##|BODY_ENGINE Microsoft Script
+##|BODY_LANGUAGE VBScript
+##|BODY_TAG_START <%
+##|BODY_TAG_END %>
+##|BODY_BEGIN
+<%
+'------------------------------------------------------------------------------
+' CSharp 1.1 for SQL BusinessObject.vbgen
+' Last Update : 2/16/2008
+' Written by: TG
+'------------------------------------------------------------------------------
+Dim bFirst
+Dim name
+Dim pname
+Dim objTable
+Dim objColumn
+Dim tableNames
+Dim databaseName
+Dim database
+Dim namespace
+Dim strAnd
+Dim intColCount
+Dim strTableColPrefix
+
+' Grab the namespace
+namespace = input.Item("txtNamespace")
+
+' Set the Language for our column data types
+MyMeta.Language = input.Item("cmbLanguages")
+MyMeta.DbTarget  = "OleDb"
+
+' Grab the choices the user made in our UI Script (see Interface Code tab)
+Set tableNames = input.Item("lstTables")
+
+databaseName  = input.Item("cmbDatabase")
+Set database = MyMeta.Databases(databaseName)
+
+' Loop through the tables the user select and generate the stored procs and save them to disk
+For intLp = 0 To tableNames.Count - 1
+
+	Set objTable = database.Tables(tablenames.item(intLp))
+
+	If objTable.PrimaryKeys.Count > 0 Then
+		strTableColPrefix = Left(GetName(objTable.PrimaryKeys(0)),3)
+	End If
+'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+' Now we have the table that we desire to build a Business Object From, let us begin.
+'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+%>
+use <%= databaseName %>
+go
+
+/**********************************************************
+ Audit Table for <%= objTable.Name %> 
+**********************************************************/
+CREATE TABLE <%= StripTb(objTable.Name) %>_Audit
+(
+<% 	For Each objColumn in objTable.Columns  
+		If objColumn.DataTypeName <> "image" Then Output.WriteLn(vbTab & ColToDDL(objColumn) & ", ")
+	Next 
+%>	ModifiedType Char(1) Not Null, --I=Insert, U=Update, D=Delete
+	ModifierName VarChar(50) Not Null,
+	ModifiedDate datetime Not Null
+) ON [PRIMARY]
+GO
+
+/**********************************************************
+ Audit Table for <%= objTable.Name %> 
+**********************************************************/
+-- =============================================
+-- Author:		Tim Golisch
+-- Create date: <%= Now %>
+-- Description:	Audit trigger for tracking changes to data in the <%= objTable.Name %> table
+-- =============================================
+CREATE TRIGGER [dbo].[trAudit_<%= objTable.Name %>]
+   ON  [dbo].[<%= objTable.Name %>]
+   FOR DELETE
+AS 
+BEGIN
+	-- SET NOCOUNT ON added to prevent extra result sets from
+	-- interfering with SELECT statements.
+	SET NOCOUNT ON;
+
+    -- Insert statements for trigger here
+	INSERT INTO dbo.<%= objTable.Name %>_Audit
+	SELECT  <% For Each objColumn in objTable.Columns  
+				 If objColumn.DataTypeName <> "image" Then output.write(objColumn.Name & ", ")
+			   Next %>
+	'D' AS ModifiedType, suser_sname() AS ModifierName, GetDate() AS ModifiedDate 
+	FROM Deleted
+END
+GO
+
+
+<% 
+	' Save the output file for this Table
+	Dim filename
+	filename = input.item("txtPath")
+
+	Dim length
+	Dim pos
+	lenth = Len(filename)
+	pos = InStrRev(filename, "\") 
+
+	If Not pos = lenth Then
+		filename = filename & "\"
+	End If
+
+	filename = filename & objTable.Alias & ".sql"
+
+	output.save filename, false
+	buffer = buffer & output.text
+	output.clear
+Next '  tableName
+	
+	output.write buffer
+ %>
+
+<% 
+'===========================================================================
+' These are support routines called by the above script
+'===========================================================================
+Function ColToDDL(objCol)
+	dim strDDL
+	Select Case objCol.DataTypeName
+		Case "float"
+			strDDL = objCol.Name & " " & objCol.DataTypeName & "(" & objCol.NumericScale & "," & objCol.NumericPrecision & ") " & BoolToNullable(objCol.IsNullable)
+		Case Else
+			strDDL = objCol.Name & " " & objCol.DataTypeNameComplete & " " & BoolToNullable(objCol.IsNullable) 
+	End Select
+	ColToDDL = strDDL
+End Function
+
+Function BoolToNullable(bolIsNullable)
+	If bolIsNullable Then
+		BoolToNullable = "NULL"
+	Else 
+		BoolToNullable = "NOT NULL"
+	End If
+End Function
+
+Function CamelCase(name)
+	CamelCase = LCase(Left(name, 1)) & Right(name, Len(name) -1)
+End Function
+
+Function StripTb(name)
+	If Left(name, 2) = "tb" Then
+		name = Mid(name, 3)
+	End If
+	name = Replace(name, "_", "")
+	StripTb = name
+End Function
+
+Function GetAlias(objColumn)
+	Dim name
+	name = TrimSpaces(objColumn.Alias)
+	GetAlias = UCase(Left(name, 1)) & Right(name, Len(name) -1)
+End Function
+
+Function GetName(objColumn)
+	Dim name
+	on error resume next
+	if objColumn = "" then
+		name = "-noname-"
+	elseif objColumn is nothing then
+		name = "-nocolumn-"
+	else
+		name = objColumn.Name
+	end if
+	on error goto 0
+	GetName = UCase(Left(name, 1)) & Right(name, Len(name) -1)
+End Function
+
+Function TrimSpaces(str)
+
+	Dim tname
+	Dim name
+	Dim char
+	Dim l
+
+	name = ""
+	tname = str
+	l = Len(tname)
+
+	For j = 1 To l
+		char = Mid(tname, j, 1)
+		If Not char = " " Then
+			name = name & char
+		End If
+	Next
+
+	TrimSpaces = name
+End Function
+%>
+##|BODY_END

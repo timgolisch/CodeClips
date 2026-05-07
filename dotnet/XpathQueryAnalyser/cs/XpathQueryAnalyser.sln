@@ -1,0 +1,24 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 18
+VisualStudioVersion = 18.3.11520.95
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XpathQueryAnalyser", "XpathQueryAnalyser.csproj", "{621279F4-FF80-4767-12FD-6DB7F75D5623}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{621279F4-FF80-4767-12FD-6DB7F75D5623}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{621279F4-FF80-4767-12FD-6DB7F75D5623}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{621279F4-FF80-4767-12FD-6DB7F75D5623}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{621279F4-FF80-4767-12FD-6DB7F75D5623}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {7820D77F-E335-469E-846C-B58058FD7C01}
+	EndGlobalSection
+EndGlobal

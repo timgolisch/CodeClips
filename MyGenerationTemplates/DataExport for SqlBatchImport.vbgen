@@ -1,0 +1,603 @@
+﻿##|TYPE Template
+##|UNIQUEID a3e37ca2-c85f-4204-90aa-0ca1c6cd7947
+##|TITLE DataExport for SQL Batch Import
+##|NAMESPACE 
+##|SOURCE_TYPE Source
+##|OUTPUT_LANGUAGE SQL
+##|GUI_ENGINE Microsoft Script
+##|GUI_LANGUAGE VBScript
+##|GUI_BEGIN
+Dim cmbDatabases
+Dim lstTables
+
+Sub setup()
+
+	If Not input.Contains("lstTables") Or Not input.Contains("txtPath") Then
+
+		ui.Title = "DataExport for SQL Batch Import."
+		ui.Width  = 330
+		ui.Height = 490
+
+		' Grab default output path
+		Dim sOutputPath
+		sOutputPath = ""
+		If input.Contains("defaultOutputPath") Then 
+			sOutputPath = input.Item("defaultOutputPath") + "SQL\"
+			'sOutputPath = "c:\applications\MyGeneration\"
+		End If
+
+		ui.AddLabel "lblPath", "Output file path: ",  "Select the output path."
+		ui.AddTextBox "txtPath", sOutputPath, "Select the Output Path."
+		ui.AddFilePicker "btnPath", "Select Path", "Select the Output Path.", "txtPath", true
+
+		'ui.AddLabel "lblNamespace", "Namespace: ",  "Provide your objects namespace."
+		'ui.AddTextBox "txtNamespace", "Your.Namespace", "Provide your objects namespace."
+
+		' List Databases in a ComboBox
+		ui.AddLabel "lblDatabases", "Select a database:", "Select a database in the dropdown below."
+		Set cmbDatabases = ui.AddComboBox("cmbDatabase", "Select a database.")
+		
+		' List Tables in a listbox
+		ui.AddLabel "lblTables", "Select tables:", "Select tables from the listbox below."
+		Set lstTables = ui.AddListBox ("lstTables", "Select tables:")
+		'lstTables.IsMultiSelect = false
+		lstTables.Select("Location")
+		lstTables.Height = 180
+
+		ui.AddLabel "lblLanguage", "Select a language:", "Select a Language for Column Mappings."
+		Set cmbLanguages = ui.AddComboBox("cmbLanguages", "Select a Language.")
+		cmbLanguages.Item("C#")              = "C#"
+		cmbLanguages.Item("C# System Types") = "C# System Types"
+		cmbLanguages.SelectedValue = "C#"
+
+		' Attach the onchange event to the cmbDatabases control.
+		setupDatabaseDropdown cmbDatabases
+		cmbDatabases.AttachEvent "onchange", "cmbDatabases_onchange"
+		cmbDatabases.SelectedValue = "wsMWC"
+		cmbDatabases_onchange(nothing)
+		
+		ui.ShowGUI = true
+	Else 
+		ui.ShowGUI = false
+	End if
+
+End Sub
+
+Sub setupDatabaseDropdown(cmbDatabases)
+	cmbDatabases.BindData MyMeta.Databases
+
+	If Not MyMeta.DefaultDatabase Is Nothing Then
+		cmbDatabases.SelectedValue = MyMeta.DefaultDatabase.Name
+		bindTables cmbDatabases.SelectedValue
+	End If
+End Sub
+
+Sub bindTables(sDatabase)
+	Set db = MyMeta.Databases(sDatabase)
+	lstTables.BindData(db.Tables)
+End Sub
+
+' Event Handler
+Sub cmbDatabases_onchange(control)
+	Set cmbDatabases = ui.item("cmbDatabase")
+	bindTables cmbDatabases.SelectedText
+End Sub
+##|GUI_END
+##|BODY_MODE Markup
+##|BODY_ENGINE Microsoft Script
+##|BODY_LANGUAGE VBScript
+##|BODY_TAG_START <%
+##|BODY_TAG_END %>
+##|BODY_BEGIN
+<%
+'------------------------------------------------------------------------------
+' Export for Data (batch) import
+' Last Update : 10/28/2011
+' Written by: TG
+'------------------------------------------------------------------------------
+Dim bFirst
+Dim name
+Dim pname
+Dim objTable
+Dim objColumn
+Dim tableNames
+Dim databaseName
+Dim database
+Dim namespace
+
+Dim filename
+Dim length
+Dim pos
+
+Dim strAnd
+Dim intColCount
+Dim strTableColPrefix
+
+' Grab the namespace
+namespace = input.Item("txtNamespace")
+
+' Set the Language for our column data types
+MyMeta.Language = input.Item("cmbLanguages")
+MyMeta.DbTarget  = "SqlClient"
+
+' Grab the choices the user made in our UI Script (see Interface Code tab)
+Set tableNames = input.Item("lstTables")
+
+databaseName  = input.Item("cmbDatabase")
+Set database = MyMeta.Databases(databaseName)
+
+'----------------------------------------------------------------------------
+' INSERT - Loop through the selected tables and generate sql and save to disk
+For intLp = 0 To tableNames.Count - 1
+
+	Set objTable = database.Tables(tablenames.item(intLp))
+
+	If objTable.PrimaryKeys.Count > 0 Then
+		strTableColPrefix = Left(GetName(objTable.PrimaryKeys(0)),3)
+	End If
+'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+' Now we have the table that we desire to build a Business Object From, let us begin.
+'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+%>-- <%= objTable.Name %> --------------------------------------------------------------
+SELECT 'INSERT INTO <%= objTable.Name %> (<% 
+	strAnd = ""
+	For Each objColumn in objTable.Columns 
+		If objColumn.Name = "DatabaseInfoID" or objColumn.Name = "FranUniqueID" Then 
+			'do nothing, we can't import calculated values
+		Else 
+			output.write(strAnd + GetAlias(objColumn)) 
+			strAnd = ", "
+		End If
+	Next %>)
+VALUES (<%
+	strAnd = ""
+	For Each objColumn in objTable.Columns 
+		If objColumn.Name = "DatabaseInfoID" or objColumn.Name = "FranUniqueID" Then 
+			'do nothing, we can't import calculated values
+		Else
+			output.write(strAnd + "' + ")
+			If objColumn.IsNullable Then
+				output.write("IsNull(")
+			End If
+
+			Select Case objColumn.LanguageType
+				Case "string"
+					output.write("'''' + Replace(" + objColumn.Name + ", '''', '''''') + ''''")
+				Case "int", "long", "bool", "byte"
+					output.write("Convert(varchar," + objColumn.Name + ")")
+				Case "DateTime", "smalldatetime"
+					output.write("'''' + Convert(varchar," + objColumn.Name + ") + ''''")
+				Case "single", "Single", "double", "decimal", "float", "real"
+					output.write("Convert(varchar," + objColumn.Name + ")")
+				Case "byte[]"
+					output.write("'''' + " + objColumn.Name + " + ''''")
+				Case "time", "TimeSpan"
+					output.write("'''' + " + objColumn.Name + " + ''''")
+				Case Else
+					output.write("'''' + /*" + objColumn.LanguageType + "*/" + objColumn.Name + " + ''''")
+			End Select
+			
+			If objColumn.IsNullable Then
+				output.write(",'NULL')")
+			End If
+			output.write(" + '")
+			strAnd = ", "
+		End If
+	Next %>)' AS Sql
+FROM <%= objTable.Name %> 
+WHERE AddDateTime > '8/3/2011'
+  AND DatabaseInfoID='AA26C8A3-CB01-4873-B9C9-5933727ECB6E'
+
+<% 
+	' Save the output file for this Table
+	filename = input.item("txtPath")
+
+	lenth = Len(filename)
+	pos = InStrRev(filename, "\") 
+
+	If Not pos = lenth Then
+		filename = filename & "\"
+	End If
+
+	filename = filename & objTable.Alias & "[insert].sql"
+
+	output.save filename, false
+	buffer = buffer & output.text
+	output.clear
+Next '  tableName
+	
+'----------------------------------------------------------------------------
+' UPDATE - Loop through the selected tables and generate sql and save to disk
+For intLp = 0 To tableNames.Count - 1
+
+	Set objTable = database.Tables(tablenames.item(intLp))
+
+'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+' Now we have the table that we desire to build a Business Object From, let us begin.
+'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+%>-- <%= objTable.Name %> --------------------------------------------------------------
+SELECT 'UPDATE <%= objTable.Name %> SET <% 
+	strAnd = ""
+	For Each objColumn in objTable.Columns 
+		If objColumn.IsInPrimaryKey or objColumn.Name = "DatabaseInfoID" or objColumn.Name = "FranUniqueID" Then 
+			'do nothing, we can't import calculated values
+		Else 
+			output.write(strAnd + "[" + GetAlias(objColumn) + "]") 
+			output.write("=' + ")
+			
+			If objColumn.IsNullable Then
+				output.write("IsNull(")
+			End If
+
+			Select Case objColumn.LanguageType
+				Case "string"
+					output.write("'''' + Replace(" + objColumn.Name + ", '''', '''''') + ''''")
+				Case "int", "long", "bool", "byte", "bit"
+					output.write("Convert(varchar," + objColumn.Name + ")")
+				Case "DateTime", "smalldatetime"
+					output.write("'''' + Convert(varchar," + objColumn.Name + ") + ''''")
+				Case "single", "Single", "double", "decimal", "float", "real"
+					output.write("Convert(varchar," + objColumn.Name + ")")
+				Case "byte[]"
+					output.write("'''' + " + objColumn.Name + " + ''''")
+				Case "time", "TimeSpan"
+					output.write("'''' + " + objColumn.Name + " + ''''")
+				Case Else
+					output.write("'''' + " + objColumn.Name + " + ''''")
+			End Select
+			
+			If objColumn.IsNullable Then
+				output.write(",'NULL')")
+			End If
+			output.write(" + '")
+			strAnd = ", "
+		End If
+	Next
+	
+	output.writeln("")
+	strAnd = ""
+	output.write(" WHERE ")
+
+	For Each objColumn in objTable.PrimaryKeys 
+		If objColumn.Name = "DatabaseInfoID" or objColumn.Name = "FranUniqueID" Then 
+			'do nothing, we can't import calculated values
+		Else 
+			output.write(strAnd + GetAlias(objColumn)) 
+			output.write("=' + Convert(varchar,")
+			output.write(GetAlias(objColumn))
+			Output.write(")")
+			strAnd = " + ' AND "
+		End If
+	Next
+	
+%> AS Sql
+FROM <%= objTable.Name %> 
+WHERE EditDateTime > '8/3/2011'
+  AND DatabaseInfoID='AA26C8A3-CB01-4873-B9C9-5933727ECB6E'
+
+<% 
+	' Save the output file for this Table
+	filename = input.item("txtPath")
+
+	lenth = Len(filename)
+	pos = InStrRev(filename, "\") 
+
+	If Not pos = lenth Then
+		filename = filename & "\"
+	End If
+
+	filename = filename & objTable.Alias & "[update].sql"
+
+	output.save filename, false
+	buffer = buffer & output.text
+	output.clear
+Next '  tableName
+	
+output.writeln("'----------------------------------------------------------------------------")
+output.writeln("' DELETE & re-INSERT - Loop through the selected tables and generate sql and save to disk")
+
+For intLp = 0 To tableNames.Count - 1
+
+	Set objTable = database.Tables(tablenames.item(intLp))
+
+	If objTable.PrimaryKeys.Count > 0 Then
+		strTableColPrefix = Left(GetName(objTable.PrimaryKeys(0)),3)
+	End If
+'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+' Now we have the table that we desire to build a Business Object From, let us begin.
+'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+%>-- <%= objTable.Name %> --------------------------------------------------------------
+SELECT 'INSERT INTO <%= objTable.Name %> (<% 
+	strAnd = ""
+	For Each objColumn in objTable.Columns 
+		If objColumn.Name = "DatabaseInfoID" Then 
+			'do nothing, we can't import calculated values
+		Else 
+			output.write(strAnd + GetAlias(objColumn)) 
+			strAnd = ", "
+		End If
+	Next %>)
+VALUES (<%
+	strAnd = ""
+	For Each objColumn in objTable.Columns 
+		If objColumn.Name = "DatabaseInfoID" or objColumn.Name = "FranUniqueID" Then 
+			'do nothing, we can't import calculated values
+		Else
+			output.write(strAnd + "' + ")
+			If objColumn.IsNullable Then
+				output.write("IsNull(")
+			End If
+
+			Select Case objColumn.LanguageType
+				Case "string"
+					output.write("'''' + Replace(" + objColumn.Name + ", '''', '''''') + ''''")
+				Case "int", "long", "bool", "byte"
+					output.write("Convert(varchar," + objColumn.Name + ")")
+				Case "DateTime", "smalldatetime"
+					output.write("'''' + Convert(varchar," + objColumn.Name + ") + ''''")
+				Case "single", "Single", "double", "decimal", "float", "real"
+					output.write("Convert(varchar," + objColumn.Name + ")")
+				Case "byte[]"
+					output.write("'''' + " + objColumn.Name + " + ''''")
+				Case "time", "TimeSpan"
+					output.write("'''' + " + objColumn.Name + " + ''''")
+				Case Else
+					output.write("'''' + /*" + objColumn.LanguageType + "*/" + objColumn.Name + " + ''''")
+			End Select
+			
+			If objColumn.IsNullable Then
+				output.write(",'NULL')")
+			End If
+			output.write(" + '")
+			strAnd = ", "
+		End If
+	Next %>)' AS Sql
+FROM <%= objTable.Name %> 
+WHERE AddDateTime > '8/3/2011'
+  AND DatabaseInfoID='AA26C8A3-CB01-4873-B9C9-5933727ECB6E'
+
+<% 
+	' Save the output file for this Table
+	filename = input.item("txtPath")
+
+	lenth = Len(filename)
+	pos = InStrRev(filename, "\") 
+
+	If Not pos = lenth Then
+		filename = filename & "\"
+	End If
+
+	filename = filename & objTable.Alias & "[insert].sql"
+
+	output.save filename, false
+	buffer = buffer & output.text
+	output.clear
+Next '  tableName
+
+
+	output.write buffer
+ %>
+
+
+<% 
+'===========================================================================
+' These are support routines called by the above script
+'===========================================================================
+Function CamelCase(name)
+	If Len(Name)>1 Then
+		CamelCase = LCase(Left(name, 1)) & Right(name, Len(name) -1)
+	Else
+		CamelCase = LCase(name)
+	End If
+End Function
+
+Function GetType(objColumn)
+	If objColumn.IsNullable Then
+		Select Case objColumn.LanguageType
+			'these types are inherently nullable
+			Case "string", "byte[]"
+				GetType = objColumn.LanguageType
+			Case Else 'use generics to make these nullble
+				GetType = "Nullable<" & objColumn.LanguageType & ">"
+		End Select
+	Else 'this column is not nullable.  use the non-nullable type.
+		GetType = objColumn.LanguageType
+	End If
+End Function
+
+Function GetNotNullCall(objColumn) 'ex: GetNotNullCall(Column)
+	'note, if you get an error on this next line, its because you sent a non-column.  Check for a place where you sent a column.property or a literal like "float"
+	If objColumn.IsNullable Then
+		'for more info on Sql types vs C# types read http://msdn.microsoft.com/en-us/library/ms131092.aspx
+		Select Case objColumn.LanguageType
+			Case "string"
+				GetNotNullCall = "DBNotNull.NullableStr"
+			Case "int"
+				GetNotNullCall = "DBNotNull.NullableInt"
+			Case "bool"
+				GetNotNullCall = "DBNotNull.NullableBool"
+			Case "DateTime", "smalldatetime"
+				GetNotNullCall = "DBNotNull.NullableDate"
+			Case "single", "Single"
+				GetNotNullCall = "DBNotNull.NullableSingle"
+			Case "double"
+				GetNotNullCall = "DBNotNull.NullableDouble"
+			Case "decimal"
+				GetNotNullCall = "DBNotNull.NullableDec"
+			Case "float"
+				GetNotNullCall = "DBNotNull.NullableFloat"
+			Case "long"
+				GetNotNullCall = "DBNotNull.NullableLong"
+			Case "byte[]"
+				GetNotNullCall = "DBNotNull.NullableBytes"
+			Case "byte"
+				GetNotNullCall = "DBNotNull.NullableByte"
+			Case "time", "TimeSpan"
+				GetNotNullCall = "DBNotNull.NullableTime"
+			Case Else
+				GetNotNullCall = "DBNotNull.Nullable" & objColumn.LanguageType
+		End Select
+	Else
+		Select Case objColumn.LanguageType
+			Case "string"
+				GetNotNullCall = "DBNotNull.DBNotNullStr"
+			Case "int"
+				GetNotNullCall = "DBNotNull.DBNotNullInt"
+			Case "bool"
+				GetNotNullCall = "DBNotNull.DBNotNullBool"
+			Case "DateTime", "smalldatetime"
+				GetNotNullCall = "DBNotNull.DBNotNullDate"
+			Case "single", "Single"
+				GetNotNullCall = "DBNotNull.DBNotNullSingle"
+			Case "double"
+				GetNotNullCall = "DBNotNull.DBNotNullDouble"
+			Case "decimal"
+				GetNotNullCall = "DBNotNull.DBNotNullDec"
+			Case "float"
+				GetNotNullCall = "DBNotNull.DBNotNullFloat"
+			Case "long"
+				GetNotNullCall = "DBNotNull.DBNotNullLong"
+			Case "byte[]"
+				GetNotNullCall = "DBNotNull.DBNotNullBytes"
+			Case "byte"
+				GetNotNullCall = "DBNotNull.DBNotNullByte"
+			Case "time", "TimeSpan"
+				GetNotNullCall = "DBNotNull.DBNotNullTime"
+			Case Else
+				GetNotNullCall = "DBNotNull.DBNotNull" & objColumn.LanguageType
+		End Select
+	End If
+End Function
+
+Function GetNoBlankCall(vartypename) 'ex: GetNoBlankCall(Column.LanguageType)
+	Select Case vartypename
+		Case "string"
+			GetNoBlankCall = "NoBlank.NoBlankStr"
+		Case "int"
+			GetNoBlankCall = "NoBlank.NoBlankInt"
+		Case "bool"
+			GetNoBlankCall = "NoBlank.NoBlankBool"
+		Case "DateTime", "smalldatetime"
+			GetNoBlankCall = "NoBlank.NoBlankDateTime"
+		Case "single"
+			GetNoBlankCall = "NoBlank.NoBlankSingle"
+		Case "double"
+			GetNoBlankCall = "NoBlank.NoBlankDouble"
+		Case "decimal"
+			GetNoBlankCall = "NoBlank.NoBlankDec"
+		Case "float"
+			GetNoBlankCall = "NoBlank.NoBlankFloat"
+		Case "long"
+			GetNoBlankCall = "NoBlank.NoBlankLong"
+		Case "byte[]"
+			GetNoBlankCall = "NoBlank.NoBlankBytes"
+		Case "byte"
+			GetNoBlankCall = "NoBlank.NoBlankByte"
+		Case "time", "TimeSpan"
+			GetNoBlankCall = "NoBlank.NoBlankTime"
+		Case Else
+			GetNoBlankCall = "NoBlank.NoBlank" & vartypename
+	End Select
+End Function
+
+Function StripTb(name)
+	If Left(name, 2) = "tb" Then
+		name = Mid(name, 3)
+	End If
+	name = Replace(name, "_", "")
+	StripTb = name
+End Function
+
+Function GetAlias(objColumn)
+	Dim name
+	name = TrimSpaces(objColumn.Alias)
+	If Left(name, 4) <> "400N" Then
+		GetAlias = UCase(Left(name, 1)) & Right(name, Len(name) -1)
+	Else
+		GetAlias = "US" & name
+	End If
+End Function
+
+Function GetName(objColumn)
+	Dim name
+	on error resume next
+	if objColumn = "" then
+		name = "-noname-"
+	elseif objColumn is nothing then
+		name = "-nocolumn-"
+	else
+		name = objColumn.Name
+	end if
+	on error goto 0
+	GetName = UCase(Left(name, 1)) & Right(name, Len(name) -1)
+End Function
+
+Function TrimSpaces(str)
+
+	Dim tname
+	Dim name
+	Dim char
+	Dim l
+
+	name = ""
+	tname = str
+	l = Len(tname)
+
+	For j = 1 To l
+		char = Mid(tname, j, 1)
+		If Not char = " " Then
+			name = name & char
+		End If
+	Next
+
+	TrimSpaces = name
+End Function
+Function FKtoRef(str)
+	Dim out
+	out = Replace(str, "_", "")
+	If Right(out, 2) = "ID" Then out = Left(out, len(out)-2)
+	
+	FKtoRef = out
+End Function
+
+Function FKtoVar(objFK)
+	Dim out
+	
+	out = StripTb(objFK.ForeignTable)
+	'if the FK remote column name is the same as this table
+	'then it won't do any good to add it to the name of the FK variable
+	If FKtoRef(objFK.ForeignColumns(0)) = objTable.Alias or FKtoRef(objFK.ForeignColumns(0)) = objTable.Alias & "Id" Then
+		'we're good.  Leave it alone
+	Else 
+		'however, if the FK column name is more verbose
+		'it may be because this table is a code table
+		'in which case, there may be multiple references to it
+		'from the same table.
+		'...we better dis-ambiguate it
+		out = out & "_" & Replace(FKtoRef(objFK.ForeignColumns(0)), objTable.Alias, "")
+	End If
+	
+	FKtoVar = out
+End Function
+
+Function FKtoVarArr(objFK)
+	Dim out
+	
+	out = FKtoVar(objFK)
+	'an array name should be plural
+	'however, the plural of address is addresses
+	'this should make it better
+	If Right(out, 2) = "es" Then
+		'uh, its already plural.  skip it
+	ElseIf Right(out, 1) = "s" Then
+		out = out & "es"
+	ElseIf Right(out, 1) = "y" Then
+		out = Left(out, Len(out)-1) & "ies"
+	Else
+		out = out & "s"
+	End If
+	
+	FKtoVarArr = out
+End Function
+%>
+##|BODY_END

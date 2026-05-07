@@ -1,0 +1,482 @@
+﻿##|TYPE Template
+##|UNIQUEID f96a9eec-6121-46c4-8fa1-4ad5c6ead808
+##|TITLE [TG]Data Warehouse ETL
+##|NAMESPACE SQLServer.Trace
+##|SOURCE_TYPE Source
+##|OUTPUT_LANGUAGE TSQL
+##|COMMENTS_BEGIN
+see dOOdads
+##|COMMENTS_END
+##|GUI_ENGINE Microsoft Script
+##|GUI_LANGUAGE VBScript
+##|GUI_BEGIN
+Dim cmbDatabases
+Dim lstTables
+
+Sub setup()
+
+	If Not input.Contains("lstTables") Or Not input.Contains("txtPath") Then
+
+		ui.Title = "Generate Import Stored Procedures"
+		ui.Width  = 330
+		ui.Height = 470
+
+		' Grab default output path
+		Dim sOutputPath
+		sOutputPath = ""
+		If input.Contains("defaultOutputPath") Then 
+			sOutputPath = input.Item("defaultOutputPath") + "wsMWC\"
+		End If
+
+		ui.AddLabel "lblPath", "Output file path: ",  "Select the output path."
+		ui.AddTextBox "txtPath", sOutputPath, "Select the Output Path."
+		ui.AddFilePicker "btnPath", "Select Path", "Select the Output Path.", "txtPath", true
+
+		'ui.AddLabel "lblNamespace", "Namespace: ",  "Provide your objects namespace."
+		'ui.AddTextBox "txtNamespace", "Your.Namespace", "Provide your objects namespace."
+
+		' List Databases in a ComboBox
+		ui.AddLabel "lblDatabases", "Select a database:", "Select a database in the dropdown below."
+		Set cmbDatabases = ui.AddComboBox("cmbDatabase", "Select a database.")
+		cmbDatabases.Select("CIS")
+		
+		' List Tables in a listbox
+		ui.AddLabel "lblTables", "Select tables:", "Select tables from the listbox below."
+		Set lstTables = ui.AddListBox ("lstTables", "Select tables:")
+		'lstTables.IsMultiSelect = false
+		lstTables.Select("Contact")
+		lstTables.Height = 180
+
+		'ui.AddLabel "lblLanguage", "Select a language:", "Select a Language for Column Mappings."
+		'Set cmbLanguages = ui.AddComboBox("cmbLanguages", "Select a Language.")
+		'cmbLanguages.Item("C#")              = "C#"
+		'cmbLanguages.Item("C# System Types") = "C# System Types"
+		'cmbLanguages.SelectedValue = "C#"
+
+		' Attach the onchange event to the cmbDatabases control.
+		setupDatabaseDropdown cmbDatabases
+		cmbDatabases.AttachEvent "onchange", "cmbDatabases_onchange"
+		
+		ui.ShowGUI = true
+	Else 
+		ui.ShowGUI = false
+	End if
+
+End Sub
+
+Sub setupDatabaseDropdown(cmbDatabases)
+	cmbDatabases.BindData MyMeta.Databases
+
+	If Not MyMeta.DefaultDatabase Is Nothing Then
+		cmbDatabases.SelectedValue = MyMeta.DefaultDatabase.Name
+		bindTables cmbDatabases.SelectedValue
+	End If
+End Sub
+
+Sub bindTables(sDatabase)
+	Set db = MyMeta.Databases(sDatabase)
+	lstTables.BindData(db.Tables)
+End Sub
+
+' Event Handler
+Sub cmbDatabases_onchange(control)
+	Set cmbDatabases = ui.item("cmbDatabase")
+	bindTables cmbDatabases.SelectedText
+End Sub
+##|GUI_END
+##|BODY_MODE Markup
+##|BODY_ENGINE Microsoft Script
+##|BODY_LANGUAGE VBScript
+##|BODY_TAG_START <%
+##|BODY_TAG_END %>
+##|BODY_BEGIN
+<%
+'------------------------------------------------------------------------------
+' Data Warehouse ETL.vbgen
+' Last Update : 10/18/2010
+' Written by: TG
+'------------------------------------------------------------------------------
+Dim bFirst
+Dim name
+Dim pname
+Dim objTable
+Dim objColumn
+Dim tableNames
+Dim databaseName
+Dim database
+Dim namespace
+Dim strAnd
+Dim intColCount
+Dim strTableColPrefix
+
+' Grab the namespace
+namespace = input.Item("txtNamespace")
+
+' Set the Language for our column data types
+MyMeta.Language = input.Item("cmbLanguages")
+MyMeta.DbTarget  = "OleDb"
+
+' Grab the choices the user made in our UI Script (see Interface Code tab)
+Set tableNames = input.Item("lstTables")
+
+databaseName  = input.Item("cmbDatabase")
+Set database = MyMeta.Databases(databaseName)
+
+' Loop through the tables the user select and generate the stored procs and save them to disk
+For intLp = 0 To tableNames.Count - 1
+
+	Set objTable = database.Tables(tablenames.item(intLp))
+
+	If objTable.PrimaryKeys.Count > 0 Then
+		strTableColPrefix = Left(GetName(objTable.PrimaryKeys(0)),3)
+	End If
+'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+' Now we have the table that we desire to build a Business Object From, let us begin.
+'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+%>
+use <%= databaseName %>
+go
+
+/*--pre--------------------------------------------------
+-- Run this query on Prod
+BEGIN TRANSACTION
+GO
+-- ALTER TABLE [svr-corp-sql].ws.dbo.<%= objTable.Name %> ADD WhDate datetime NULL
+ALTER TABLE dbo.<%= objTable.Name %> ADD WhDate datetime NULL
+GO
+COMMIT
+
+--**********************************************************
+-- Table Update marker/unmarker for <%= objTable.Name %> 
+--**********************************************************
+-- =============================================
+-- Author:		Tim Golisch
+-- Create date: <%= Now %>
+-- Description:	Trigger for tracking changes to data in the <%= objTable.Name %> table
+-- =============================================
+CREATE TRIGGER [dbo].[trUnMark_<%= objTable.Name %>]
+   ON  [dbo].[<%= objTable.Name %>]
+   FOR UPDATE
+AS 
+BEGIN
+	-- SET NOCOUNT ON added to prevent extra result sets from
+	-- interfering with SELECT statements.
+	SET NOCOUNT ON;
+
+	------------------------------------------------------------------------------------------
+	--If this data row is being updated, then wipe the Warehouse Date marker, so we know 
+	--  that it needs to be imported/updated again.
+	--HOWEVER, if the WhDate column is being updated, then this IS NOT A DATA CHANGE! It is 
+	--  probably the import process marking this row for import.  In which case it would be
+	--  pretty stupid to just turn-around and delete the new WhDate value (that we just set)!
+	--  So, make sure we know what kind of update is happening before we wipe the import stamp.
+	------------------------------------------------------------------------------------------
+
+	-- Mark the WhDate column as NULL so we know this data has been changed
+	UPDATE T
+	SET T.WhDate = NULL 
+	FROM <%= objTable.Name %> T INNER JOIN inserted I ON <% 
+		strAnd = ""
+		For Each objColumn in objTable.PrimaryKeys
+			output.write(strAnd & "T." & objColumn.Name & " = I." & objColumn.Name)
+			strAnd = " AND "
+		Next 
+%>
+		INNER JOIN deleted D ON I.WhDate = D.WhDate <% 
+		For Each objColumn in objTable.PrimaryKeys
+			output.write(strAnd & "D." & objColumn.Name & " = I." & objColumn.Name)
+		Next 
+%>
+	--Explanation:
+	--If the old WhDate matches the new WhDate, then it means this update command wasn't trying
+	--  to set the WhDate.  Which means this was an actual data change, so we should wipe the 
+	--  WhDate so the next import will pick up the changed data.
+END
+GO
+
+---------------------------------------------------------------------------------------------------
+-- The rest of this SP gets installed on WH--------------------------------------------------------
+
+-------------------------------------------------------*/
+-- Clean up, just in case we ever need it 
+--DROP PROCEDURE dbo.spImport<%= StripTbl(objTable.Name) %>
+-------------------------------------------------------
+
+
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+-- ============================================================
+-- Author:		Tim Golisch
+-- Create date: Oct 2010
+-- Description:	Pull data from prod wsMWC into Warehouse wsMWC
+-- ============================================================
+CREATE PROCEDURE [dbo].[spImport<%= StripTbl(objTable.Name) %>]
+AS
+BEGIN
+	SET NOCOUNT ON;
+
+	Declare @WhDate as DateTime
+	SET @WhDate = GetDate()
+    
+    --Mark the (prod) rows that will be imported. Stamp them with the import date/time
+	UPDATE [.].ws.dbo.<%= objTable.Name %> SET WhDate = @WhDate 
+	WHERE WhDate IS NULL 
+	
+	--Diagnostics: See if we have already updated the table. Undo the latest transfer date-stamp.
+	--select distinct whdate from [.].ws.dbo.<%= objTable.Name %>
+	--update [.].ws.dbo.<%= objTable.Name %> set whdate = null where whdate > '10/1/2010'
+
+	--Copy the data into a temp table, to save time
+	SELECT * INTO #<%= StripTbl(objTable.Name) %> FROM [.].ws.dbo.<%= objTable.Name %> 
+	WHERE WhDate = @WhDate
+
+
+	-- !!! First do the updates, then the inserts.  Otherwise, the inserted records will get updated too !!!
+
+	--these are the rows that have been updated and need to be copied-over the existing data
+	--it gets a little complicated from here down
+    DECLARE curImport CURSOR FOR
+		SELECT <% 	
+	strAnd = ""
+	intColCount = 1
+	For Each objColumn in objTable.Columns  
+		If objColumn.Name <> "WhDate" Then
+			Output.Write(strAnd & "T." & objColumn.Name)
+			'please just do 4 vars per line.  It is much more readable this way
+			If intColCount mod 4 = 0 Then strAnd = "," & vbCrLf & vbTab & vbTab & vbTab Else strAnd = ", "
+			intColCount = intColCount + 1
+		End If
+	Next 
+%>	
+		FROM #<%= StripTbl(objTable.Name) %> T INNER JOIN <%= objTable.Name %> ON <% 	
+	strAnd = vbTab
+	For Each objColumn in objTable.PrimaryKeys  
+		Output.Write(strAnd & "T." & objColumn.Name & "=" & objTable.Name & "." & objColumn.Name)
+		strAnd = " AND "
+	Next 
+%>
+
+	DECLARE <%
+	intColCount = 1
+	strAnd = ""
+	For Each objColumn in objTable.Columns  
+		If objColumn.Name <> "WhDate" Then 
+			Output.Write(strAnd & "@" & ColToDDL(objColumn))
+			If intColCount mod 4 = 0 Then strAnd = "," & vbCrLf & vbTab & vbTab & vbTab Else strAnd = ", "
+			intColCount = intColCount + 1
+		End If
+	Next 
+%>
+
+	OPEN curImport
+	FETCH NEXT FROM curImport INTO <%
+	strAnd = vbTab
+	intColCount = 1
+	For Each objColumn in objTable.Columns  
+		If objColumn.Name <> "WhDate" Then 
+			Output.Write(strAnd & "@" & objColumn.Name)
+			If intColCount mod 4 = 0 Then strAnd = "," & vbCrLf & vbTab & vbTab & vbTab Else strAnd = ", "
+			intColCount = intColCount + 1
+		End If
+	Next 
+%>	 
+	While @@FETCH_STATUS = 0
+		Begin
+			--add the new record to the table 	
+			UPDATE <%= objTable.Name %> SET <%
+	strAnd = vbTab
+	intColCount = 1
+	For Each objColumn in objTable.Columns  
+		If objColumn.Name <> "WhDate" And Not objColumn.IsInPrimaryKey Then 
+			Output.Write(strAnd & objColumn.Name & "=@" & objColumn.Name)
+			If intColCount mod 4 = 0 Then strAnd = "," & vbCrLf & vbTab & vbTab & vbTab & vbTab Else strAnd = ", "
+			intColCount = intColCount + 1
+		End If
+	Next 
+%>	 
+			WHERE <% 	
+	strAnd = vbTab
+	For Each objColumn in objTable.PrimaryKeys  
+		Output.Write(strAnd & objColumn.Name & "=@" & objColumn.Name)
+		strAnd = " AND "
+	Next 
+%>
+
+			FETCH NEXT FROM curImport INTO <%
+	strAnd = vbTab
+	intColCount = 1
+	For Each objColumn in objTable.Columns  
+		If objColumn.Name <> "WhDate" Then 
+			Output.Write(strAnd & "@" & objColumn.Name)
+			If intColCount mod 4 = 0 Then strAnd = "," & vbCrLf & vbTab & vbTab & vbTab & vbTab Else strAnd = ", "
+			intColCount = intColCount + 1
+		End If
+	Next 
+%>	 
+		End
+
+    CLOSE curImport
+    DEALLOCATE curImport
+ 
+	--These are the new rows, they can be bulk-inserted
+	INSERT INTO <%= objTable.Name %> (<%
+	strAnd = "  "
+	intColCount = 1
+	For Each objColumn in objTable.Columns  
+		If objColumn.Name <> "WhDate" Then 
+			Output.Write(strAnd & objColumn.Name)
+			If intColCount mod 4 = 0 Then strAnd = "," & vbCrLf & vbTab & vbTab & vbTab & vbTab Else strAnd = ", "
+			intColCount = intColCount + 1
+		End If
+	Next 
+%>)
+	SELECT	<%
+	strAnd = vbTab
+	intColCount = 1
+	For Each objColumn in objTable.Columns  
+		If objColumn.Name <> "WhDate" Then 
+			Output.Write(strAnd & "T." & objColumn.Name)
+			If intColCount mod 4 = 0 Then strAnd = "," & vbCrLf & vbTab & vbTab & vbTab & vbTab Else strAnd = ", "
+			intColCount = intColCount + 1
+		End If
+	Next 
+%>	 
+	FROM #<%= StripTbl(objTable.Name) %> T LEFT JOIN <%= objTable.Name %> ON <%
+	strAnd = ""
+	For Each objColumn in objTable.PrimaryKeys  
+		Output.Write(strAnd & "T." & objColumn.Name & "=" & objTable.Name & "." & objColumn.Name)
+		strAnd = " AND "
+	Next 
+%>	  
+	WHERE <%= objTable.Name %>.DatabaseInfoID IS NULL
+
+    --Done.  Drop the temp table
+    DROP TABLE #<%= StripTbl(objTable.Name) %>
+    
+    --truncate any old data from <%= objTable.Name %> in Production (more than 120 days old)
+    DELETE FROM [.].ws.dbo.<%= objTable.Name %> WHERE TransmitDateTimeHO < DATEADD(d, -120, GetDate())
+END
+GO
+
+/*******************************
+-- Test block
+
+--before
+select COUNT(*) FROM [.].ws.dbo.<%= objTable.Name %>
+select COUNT(*) from <%= objTable.Name %>
+
+--run
+exec spImport<%= StripTbl(objTable.Name) %>
+
+--after
+select COUNT(*) FROM [.].ws.dbo.<%= objTable.Name %>
+select COUNT(*) from <%= objTable.Name %>
+
+********************************/
+
+
+<% 	'==================================================================================
+	' Save the output file for this Table
+	Dim filename
+	filename = input.item("txtPath")
+
+	Dim length
+	Dim pos
+	lenth = Len(filename)
+	pos = InStrRev(filename, "\") 
+
+	If Not pos = lenth Then
+		filename = filename & "\"
+	End If
+
+	filename = filename & "spImport" & StripTbl(objTable.Alias) & ".sql"
+
+	output.save filename, false
+	buffer = buffer & output.text
+	output.clear
+Next '  tableName
+	
+	output.write buffer
+ %>
+
+<% 
+'===========================================================================
+' These are support routines called by the above script
+'===========================================================================
+Function ColToDDL(objCol)
+	dim strDDL
+	Select Case objCol.DataTypeName
+		Case "float"
+			strDDL = objCol.Name & " " & objCol.DataTypeName ' & "(" & objCol.NumericScale & "," & objCol.NumericPrecision & ") " '& BoolToNullable(objCol.IsNullable)
+		Case Else
+			strDDL = objCol.Name & " " & objCol.DataTypeNameComplete & " " '& BoolToNullable(objCol.IsNullable) 
+	End Select
+	ColToDDL = strDDL
+End Function
+
+Function BoolToNullable(bolIsNullable)
+	If bolIsNullable Then
+		BoolToNullable = "NULL"
+	Else 
+		BoolToNullable = "NOT NULL"
+	End If
+End Function
+
+Function CamelCase(name)
+	CamelCase = LCase(Left(name, 1)) & Right(name, Len(name) -1)
+End Function
+
+Function StripTbl(name)
+	If Left(name, 3) = "tbl" Then
+		name = Mid(name, 4)
+	End If
+	name = Replace(name, "_", "")
+	StripTbl = name
+End Function
+
+Function GetAlias(objColumn)
+	Dim name
+	name = TrimSpaces(objColumn.Alias)
+	GetAlias = UCase(Left(name, 1)) & Right(name, Len(name) -1)
+End Function
+
+Function GetName(objColumn)
+	Dim name
+	on error resume next
+	if objColumn = "" then
+		name = "-noname-"
+	elseif objColumn is nothing then
+		name = "-nocolumn-"
+	else
+		name = objColumn.Name
+	end if
+	on error goto 0
+	GetName = UCase(Left(name, 1)) & Right(name, Len(name) -1)
+End Function
+
+Function TrimSpaces(str)
+
+	Dim tname
+	Dim name
+	Dim char
+	Dim l
+
+	name = ""
+	tname = str
+	l = Len(tname)
+
+	For j = 1 To l
+		char = Mid(tname, j, 1)
+		If Not char = " " Then
+			name = name & char
+		End If
+	Next
+
+	TrimSpaces = name
+End Function
+%>
+##|BODY_END
