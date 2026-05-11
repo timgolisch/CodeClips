@@ -1,16 +1,16 @@
+Imports Microsoft.VisualBasic.Logging
+
 Public Class frmMain
     Inherits System.Windows.Forms.Form
 
 #Region " Windows Form Designer generated code "
 
-    Public Sub New(ByVal DSN As String)
+    Public Sub New()
         MyBase.New()
 
         'This call is required by the Windows Form Designer.
         InitializeComponent()
 
-        'Add any initialization after the InitializeComponent() call
-        _strDSN = DSN
     End Sub
 
     'Form overrides dispose to clean up the component list.
@@ -146,8 +146,8 @@ Public Class frmMain
 
     End Sub
 
-    Private _strDSN As String
 #End Region
+    Private _strDSN As String
 
     Private Sub frmMain_Load(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles MyBase.Load
         Dim cn As SqlClient.SqlConnection
@@ -156,24 +156,33 @@ Public Class frmMain
         Dim strSQL As String
         Dim sid() As Byte
         Dim byte2text As System.Text.Decoder
-        Try
-            strSQL = "SELECT SUSER_NAME() AS SUSERNAME, SUSER_SNAME() AS SUSERSNAME, USER_NAME() AS USERNAME, USER AS JustUser, SUSER_SID() AS SUSERSID"
-            cn = New SqlClient.SqlConnection(_strDSN)
-            cn.Open()
 
-            cmd = cn.CreateCommand
-            cmd.CommandText = strSQL
+        Dim login As New frmLogin()
+        Dim re As DialogResult = login.ShowDialog()
 
-            dr = cmd.ExecuteReader
-            If dr.Read Then
-                txtSUSER_NAME.Text = DBNotNull.DBNotNullStr(dr.Item("SUSERNAME"))
-                txtSUSER_SNAME.Text = DBNotNull.DBNotNullStr(dr.Item("SUSERSNAME"))
-                txtUSER_NAME.Text = DBNotNull.DBNotNullStr(dr.Item("USERNAME"))
-                txtUSER.Text = DBNotNull.DBNotNullStr(dr.Item("JustUser"))
-            End If
-        Catch ex As Exception
-            MsgBox(ex.Message, , "Error")
-        End Try
+        If (re = DialogResult.OK) Then
+            _strDSN = login.DSN
+
+            Try
+                strSQL = "SELECT SUSER_NAME() AS SUSERNAME, SUSER_SNAME() AS SUSERSNAME, USER_NAME() AS USERNAME, USER AS JustUser, SUSER_SID() AS SUSERSID"
+                cn = New SqlClient.SqlConnection(_strDSN)
+                cn.Open()
+
+                cmd = cn.CreateCommand
+                cmd.CommandText = strSQL
+
+                dr = cmd.ExecuteReader
+                If dr.Read Then
+                    txtSUSER_NAME.Text = DBNotNull.DBNotNullStr(dr.Item("SUSERNAME"))
+                    txtSUSER_SNAME.Text = DBNotNull.DBNotNullStr(dr.Item("SUSERSNAME"))
+                    txtUSER_NAME.Text = DBNotNull.DBNotNullStr(dr.Item("USERNAME"))
+                    txtUSER.Text = DBNotNull.DBNotNullStr(dr.Item("JustUser"))
+                End If
+            Catch ex As Exception
+                MsgBox(ex.Message, , "Error")
+            End Try
+        End If
+
     End Sub
 
     Private Sub btnDone_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles btnDone.Click

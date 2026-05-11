@@ -165,17 +165,19 @@ Public Class frmLogin
     Public Event SuccessfulLogin(ByVal DSN As String)
 
 #Region " Settings - Properties "
-    Private ReadOnly Property DSN() As String
+    Public ReadOnly Property DSN() As String
         Get
             Dim strDSN As String
             If chkIntegratedSecurity.Checked Then
-                strDSN = "Integrated Security=SSPI;Persist Security Info=False" & _
-                    ";Data Source=" & txtServer.Text
+                strDSN = "Integrated Security=SSPI;Persist Security Info=False" &
+                    ";Data Source=" & txtServer.Text &
+                    ";TrustServerCertificate=True;"
             Else 'use the login/pw they provided
-                strDSN = "Persist Security Info=False" & _
-                    ";User ID=" & txtLogin.Text & _
-                    ";Password=" & txtPassword.Text & _
-                    ";Data Source=" & txtServer.Text
+                strDSN = "Persist Security Info=False" &
+                    ";User ID=" & txtLogin.Text &
+                    ";Password=" & txtPassword.Text &
+                    ";Data Source=" & txtServer.Text &
+                    ";TrustServerCertificate=True;"
             End If
             Return strDSN
         End Get
@@ -183,17 +185,18 @@ Public Class frmLogin
 #End Region
 
     Private Sub frmLogin_Load(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles MyBase.Load
-        If GetSetting(_cAPPNAME, Me.Name, "IntegratedSecurity", "false") = "true" Then
+        If My.Settings.IntegratedSecurity.ToLower = "true" Then
             chkIntegratedSecurity.Checked = True
         End If
     End Sub
 
     Private Sub frmLogin_Closing(ByVal sender As Object, ByVal e As System.ComponentModel.CancelEventArgs) Handles MyBase.Closing
         If chkIntegratedSecurity.Checked Then
-            SaveSetting(_cAPPNAME, Me.Name, "IntegratedSecurity", "true")
+            My.Settings.IntegratedSecurity = "true"
         Else
-            SaveSetting(_cAPPNAME, Me.Name, "IntegratedSecurity", "false")
+            My.Settings.IntegratedSecurity = "false"
         End If
+        My.Settings.Save()
     End Sub
 
     Private Sub chkIntegratedSecurity_CheckedChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles chkIntegratedSecurity.CheckedChanged
@@ -217,6 +220,7 @@ Public Class frmLogin
             cn = Nothing
 
             RaiseEvent SuccessfulLogin(Me.DSN)
+            Me.DialogResult = DialogResult.OK
 
             Me.Close()
         Catch ex As Exception
