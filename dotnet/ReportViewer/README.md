@@ -3,9 +3,9 @@
 This project is a web app, written in C#. 
 It was originally written as an example on CodeProject.com (which was shut-down in 2025).
 The purpose is to allow programmers/users to use/run a RDL/RDLC (SSRS report) without having to install SSRS.
-The nuget package Microsoft.ReportViewer.WebForms and Microsoft.ReportViewer.Common are required.
+The nuget package Microsoft.Report.Viewer is required.
 
-Note: This is an older version. The newer version is also on this site but in a different repo with some significant updates: https://github.com/timgolisch/ReportViewer
+Note: I updated this in 2026 to use the most-recent runtime, and corrected a few things so you can just download and run it.
 
 # Introduction
 This is a common scenario: You have a web site, written in ASP.NET (or MVC or SharePoint) and you would like to display some reports. You might be planning to write some new reports and you are trying to decide on which technology to use or you might have several SSRS reports that were already made, earlier, and you want to run them from your ASP.NET site.
