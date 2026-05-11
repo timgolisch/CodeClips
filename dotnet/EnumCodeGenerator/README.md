@@ -20,7 +20,8 @@ I set up the list to use (keyboard) down arrow and spacebar to select tables fro
 When you select a table from the list, it will display the columns and properties of that table (marginally useful, I suppose).
 
 # Example Output
-`using System;
+```
+using System;
 
 Model.DataLayer.Enums
 {
@@ -37,4 +38,5 @@ Model.DataLayer.Enums
       Florida=9,
       // you get the idea
    };
-}`
+}
+```
