@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Text;
@@ -71,8 +72,8 @@ namespace EnumCodeGenerator
 
         private void frmMain_Load(object sender, EventArgs e)
         {
-            txtSavePath.Text = Settings.SavePath;
-            lblServer.Text = Settings.Server;
+            txtSavePath.Text = Settings.Default.SavePath;
+            lblServer.Text = Settings.Default.Server;
             LoadDbList();
         }
 
@@ -136,7 +137,7 @@ namespace EnumCodeGenerator
             catch (Exception ex)
             {
                 if (ex.Message == "Invalid column name 'ID'.")
-                    MessageBox.Show("You cannot use this table because it does not have an [ID] column.");
+                    Debug.WriteLine($"You cannot use table [{strTable}] because it does not have an [ID] column.");
                 else
                     MessageBox.Show(ex.Message);
             };
@@ -174,7 +175,7 @@ namespace EnumCodeGenerator
                     //header
                     sbEnum.Append("using System;\n\n");
                     //namespace
-                    sbEnum.Append(Settings.Namespace + "\n{\n");
+                    sbEnum.Append(Settings.Default.Namespace + "\n{\n");
                     //enum declaration
                     sbEnum.Append("\tpublic enum " + TableName + "Enum\n\t{");
 
