@@ -9,10 +9,10 @@ Imports System.Runtime.InteropServices
 ' Review the values of the assembly attributes
 
 <Assembly: AssemblyTitle("DataSetToXLSX")> 
-<Assembly: AssemblyDescription("")> 
-<Assembly: AssemblyCompany("State of Michigan")> 
-<Assembly: AssemblyProduct("DataSetToXLSX")> 
-<Assembly: AssemblyCopyright("Copyright © State of Michigan 2014")> 
+<Assembly: AssemblyDescription("")>
+<Assembly: AssemblyCompany("")>
+<Assembly: AssemblyProduct("DataSetToXLSX")>
+<Assembly: AssemblyCopyright("")>
 <Assembly: AssemblyTrademark("")> 
 
 <Assembly: ComVisible(False)>

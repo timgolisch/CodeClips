@@ -5,7 +5,6 @@
             Dim xslx As New Workbook(ds)
             Dim workbook As String
             Dim worksheets As New List(Of String)
-            Dim file As New ZipFile
 
             workbook = xslx.Serialize
             For Each WorkSheet As WorkSheet In xslx.WorkSheets
