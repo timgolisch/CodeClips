@@ -17,8 +17,6 @@
         fileName = System.IO.Path.Combine(txtOutputPath.Text, txtFilename.Text + ".xlsx")
 
         Dim ExcelGenerator As New ExportToExcel.ExcelFileGenerator
-        ExcelGenerator.Headers.Add("<div align=""center""><font size=""14pt""><strong>Unable To Test Decision Count Report</strong></font></div>")
-        ExcelGenerator.Headers.Add("<span><strong>Test Period:</strong> Spring 2013</span>")
 
         ExcelGenerator.CreateExcelFile(ds, fileName)
         txtRaw.Text = "File generated to " + fileName + vbCrLf + "can be opened with excel"

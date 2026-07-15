@@ -34,29 +34,29 @@ Partial Class Demo
         '
         'Button1
         '
-        Me.Button1.Location = New System.Drawing.Point(33, 1)
+        Me.Button1.Location = New System.Drawing.Point(291, 1)
         Me.Button1.Name = "Button1"
         Me.Button1.Size = New System.Drawing.Size(126, 23)
         Me.Button1.TabIndex = 1
-        Me.Button1.Text = "Using Open Xml"
+        Me.Button1.Text = "OpenXml  File"
         Me.Button1.UseVisualStyleBackColor = True
         '
         'Button2
         '
-        Me.Button2.Location = New System.Drawing.Point(183, 1)
+        Me.Button2.Location = New System.Drawing.Point(32, 1)
         Me.Button2.Name = "Button2"
         Me.Button2.Size = New System.Drawing.Size(154, 23)
         Me.Button2.TabIndex = 2
-        Me.Button2.Text = "Using Xml Serialization"
+        Me.Button2.Text = "Preview Xml Serialization"
         Me.Button2.UseVisualStyleBackColor = True
         '
         'Button3
         '
-        Me.Button3.Location = New System.Drawing.Point(364, 1)
+        Me.Button3.Location = New System.Drawing.Point(434, 1)
         Me.Button3.Name = "Button3"
-        Me.Button3.Size = New System.Drawing.Size(177, 23)
+        Me.Button3.Size = New System.Drawing.Size(139, 23)
         Me.Button3.TabIndex = 3
-        Me.Button3.Text = "Using Excel Xml"
+        Me.Button3.Text = "Excel Xml File"
         Me.Button3.UseVisualStyleBackColor = True
         '
         'Label1
