@@ -6,23 +6,6 @@
 
     End Sub
 
-    Private Sub UsingOpenXml_Click(sender As System.Object, e As System.EventArgs) Handles Button1.Click
-        Dim ds As DataSet = GetDummyData()
-        Dim fileName As String
-
-        txtRaw.Text = "processing ..."
-        Application.DoEvents()
-        System.Threading.Thread.Sleep(1000) 'allow the user one second to read the processing message
-
-        fileName = System.IO.Path.Combine(txtOutputPath.Text, txtFilename.Text + ".xlsx")
-
-        Dim ExcelGenerator As New ExportToExcel.ExcelFileGenerator
-
-        ExcelGenerator.CreateExcelFile(ds, fileName)
-        txtRaw.Text = "File generated to " + fileName + vbCrLf + "can be opened with excel"
-
-    End Sub
-
     Private Sub UsingSerialization_Click(sender As System.Object, e As System.EventArgs) Handles Button2.Click
         Dim ds As DataSet = GetDummyData()
 
@@ -57,6 +40,23 @@
 
         ExcelXmlGenerator.CreateExcelXmlFile(ds, fileName)
 
+        txtRaw.Text = "File generated to " + fileName + vbCrLf + "can be opened with excel"
+
+    End Sub
+
+    Private Sub UsingOpenXml_Click(sender As System.Object, e As System.EventArgs) Handles Button1.Click
+        Dim ds As DataSet = GetDummyData()
+        Dim fileName As String
+
+        txtRaw.Text = "processing ..."
+        Application.DoEvents()
+        System.Threading.Thread.Sleep(1000) 'allow the user one second to read the processing message
+
+        fileName = System.IO.Path.Combine(txtOutputPath.Text, txtFilename.Text + ".xlsx")
+
+        Dim ExcelGenerator As New ExportToExcel.ExcelFileGenerator
+
+        ExcelGenerator.CreateExcelFile(ds, fileName)
         txtRaw.Text = "File generated to " + fileName + vbCrLf + "can be opened with excel"
 
     End Sub

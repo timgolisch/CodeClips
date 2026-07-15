@@ -9,6 +9,7 @@ Imports System.Reflection
 Imports DocumentFormat.OpenXml.Packaging
 Imports DocumentFormat.OpenXml.Spreadsheet
 Imports DocumentFormat.OpenXml
+'Imports DocumentFormat.OpenXml.Drawing
 
 Namespace ExportToExcel
 
@@ -16,7 +17,8 @@ Namespace ExportToExcel
     '  Credit: This code was adapted from another project
     '  http://www.codeproject.com/Articles/692092/A-free-Export-to-Excel-Csharp-class-using-OpenXML
     '  http://www.mikesknowledgebase.com
-    '
+    '  For more info on formatting and other topics about OpenXml, download the free book "Open XML the markup explained"
+    '  https://openxmldeveloper.org/cfs-file.ashx/__key/communityserver-components-postattachments/00-00-00-19-70/Open-XML-Explained.pdf
     '----------------------------------------------------------------
 
     Public Class ExcelFileGenerator(Of T) : Inherits ExcelFileGenerator 'Of T, declares T a generic type
@@ -85,6 +87,7 @@ Namespace ExportToExcel
 
     Public Class ExcelFileGenerator
         Const cDEFAULT_NAMESPACE As String = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+        Private headerStyleIndexId As String = ""
 
 #Region "Properties"
         Public Headers As New List(Of String)
@@ -191,13 +194,15 @@ Namespace ExportToExcel
             spreadsheet.AddWorkbookPart()
             spreadsheet.WorkbookPart.Workbook = New DocumentFormat.OpenXml.Spreadsheet.Workbook
 
-            '  My thanks to James Miera for the following line of code (which prevents crashes in Excel 2010)
+            '  The following line of code prevents crashes in Excel 2010
             spreadsheet.WorkbookPart.Workbook.Append(New BookViews(New WorkbookView))
 
             '  "WorkbookStylesPart" is required, in-case the user needs OLEDB to connect to this .xlsx file
             Dim workbookStylesPart As WorkbookStylesPart = spreadsheet.WorkbookPart.AddNewPart(Of WorkbookStylesPart)("rIdStyles")
-            Dim stylesheet As Stylesheet = New Stylesheet
-            workbookStylesPart.Stylesheet = stylesheet
+            workbookStylesPart.Stylesheet = New Stylesheet()
+            ' Defining the header style(s) can be pretty bulky. Better to do that in a separate function
+            DefineHeaderStyle(workbookStylesPart.Stylesheet)
+            spreadsheet.WorkbookPart.WorkbookStylesPart.Stylesheet.Save()
 
             '  Each DataTable in our DataSet will become an Excel Worksheet in the spreasheet.
             Dim worksheetNumber As UInteger = 1
@@ -208,9 +213,6 @@ Namespace ExportToExcel
 
                 Dim newWorksheetPart As WorksheetPart = spreadsheet.WorkbookPart.AddNewPart(Of WorksheetPart)()
                 newWorksheetPart.Worksheet = New DocumentFormat.OpenXml.Spreadsheet.Worksheet
-
-                ' create sheet data
-                newWorksheetPart.Worksheet.AppendChild(New DocumentFormat.OpenXml.Spreadsheet.SheetData)
 
                 ' save worksheet
                 WriteDataTableToExcelWorksheet(dt, newWorksheetPart)
@@ -238,7 +240,8 @@ Namespace ExportToExcel
 
         Private Sub WriteDataTableToExcelWorksheet(ByVal dt As DataTable, ByVal worksheetPart As WorksheetPart)
             Dim worksheet = worksheetPart.Worksheet
-            Dim sheetData As SheetData = worksheet.GetFirstChild(Of SheetData)()
+            Dim sheetData As SheetData
+            Dim columns As Columns
             Dim rowIndex As Integer = 1
             Dim colInx As Integer
             Dim cellValue As String = ""
@@ -249,18 +252,35 @@ Namespace ExportToExcel
             '  Also create an array, showing which type each column of data is (Text or Numeric).
             '  So when the actual data is written, it will write Text values or Numeric cell values.
             Dim numberOfColumns As Integer = dt.Columns.Count
-            Dim IsNumericColumn() As Boolean = New Boolean((numberOfColumns) - 1) {}
+            Dim columnSizes() As Integer = New Integer(numberOfColumns - 1) {}
+            Dim IsNumericColumn() As Boolean = New Boolean(numberOfColumns - 1) {}
 
-            Dim excelColumnNames() As String = New String((numberOfColumns) - 1) {}
+            Dim excelColumnNames() As String = New String(numberOfColumns - 1) {}
             For n As Integer = 0 To numberOfColumns - 1
                 excelColumnNames(n) = GetExcelColumnName(n)
             Next
+
+            columns = worksheet.GetOrAddFirstChild(Of Columns)()
+            ' Column widths
+            For n As Integer = 0 To numberOfColumns - 1
+                columnSizes(n) = Len(dt.Columns(n).ColumnName)
+                Dim col As New Column
+                col.Min = n + 1
+                col.Max = n + 1
+                col.Width = columnSizes(n) * 1.5
+                col.CustomWidth = True
+                columns.Append(col)
+            Next
+
+            ' create sheet data
+            sheetData = worksheet.GetOrAddFirstChild(Of SheetData)()
 
             '
             'print-headers
             '
             For Each HeaderText As String In Me.Headers
                 Dim pageHeaderRow = New Row() With {.RowIndex = rowIndex} ' add a row at the top of spreadsheet
+                'pageHeaderRow
                 sheetData.Append(pageHeaderRow)
                 AppendTextCell((excelColumnNames(colInx) + CStr(rowIndex)), HeaderText, pageHeaderRow, HeaderType.Filters)
                 rowIndex += 1
@@ -275,10 +295,11 @@ Namespace ExportToExcel
 
             For colInx = 0 To numberOfColumns - 1
                 Dim col As DataColumn = dt.Columns(colInx)
-                AppendTextCell((excelColumnNames(colInx) + CStr(rowIndex)), col.ColumnName, headerRow)
+                AppendTextCell((excelColumnNames(colInx) + CStr(rowIndex)), col.ColumnName, headerRow, HeaderType.Title)
                 IsNumericColumn(colInx) = ((col.DataType.FullName = "System.Decimal") _
                             OrElse (col.DataType.FullName = "System.Int32"))
             Next
+            headerRow.StyleIndex = headerStyleIndexId
 
             '
             '  Now, step through each row of data in the DataTable...
@@ -329,14 +350,14 @@ Namespace ExportToExcel
             None
         End Enum
 
-        Private Shared Sub AppendTextCell(ByVal cellReference As String, ByVal cellStringValue As String, ByVal excelRow As Row, Optional headerFormat As HeaderType = HeaderType.None)
+        Private Sub AppendTextCell(ByVal cellReference As String, ByVal cellStringValue As String, ByVal excelRow As Row, Optional headerFormat As HeaderType = HeaderType.None)
             '  Add a new Excel Cell to the Row 
             Dim cell As New Cell With {.CellReference = cellReference, .DataType = CellValues.String}
             Dim cellValue As New CellValue
             Select Case headerFormat
-                'Case HeaderType.Title
-                '    cell.DataType = CellValues.InlineString
-                '    cell.InlineString = New Spreadsheet.InlineString(cellStringValue)
+                Case HeaderType.Title
+                    cell.StyleIndex = headerStyleIndexId
+                    cellValue.Text = cellStringValue
                 'Case HeaderType.Filters
                 '    cell.DataType = CellValues.InlineString
                 '    cell.InlineString = New Spreadsheet.InlineString(cellStringValue)
@@ -352,7 +373,7 @@ Namespace ExportToExcel
             excelRow.Append(cell)
         End Sub
 
-        Private Shared Sub AppendNumericCell(ByVal cellReference As String, ByVal cellStringValue As String, ByVal excelRow As Row)
+        Private Sub AppendNumericCell(ByVal cellReference As String, ByVal cellStringValue As String, ByVal excelRow As Row)
             '  Add a new Excel Cell to the Row 
             Dim cell As New Cell With {.CellReference = cellReference}
             Dim cellValue As CellValue = New CellValue
@@ -361,7 +382,7 @@ Namespace ExportToExcel
             excelRow.Append(cell)
         End Sub
 
-        Private Shared Function GetExcelColumnName(ByVal columnIndex As Integer) As String
+        Private Function GetExcelColumnName(ByVal columnIndex As Integer) As String
             '  Convert a zero-based column index into an Excel column reference  (A, B, C.. Y, Y, AA, AB, AC... AY, AZ, B1, B2..)
             '
             '  eg  GetExcelColumnName(0) should return "A"
@@ -378,6 +399,59 @@ Namespace ExportToExcel
             Dim secondChar As Char = ChrW(65 + (columnIndex Mod 26))
             Return String.Format("{0}{1}", firstChar, secondChar)
         End Function
+
+#End Region
+#Region "Stylesheet"
+        Private Sub DefineHeaderStyle(stylesheet As Stylesheet)
+            'make sure the stylesheet already has the elements to hold these values that we will make
+            If stylesheet.Fills Is Nothing Then stylesheet.Fills = New Fills(New Fill)
+            If stylesheet.Borders Is Nothing Then stylesheet.Borders = New Borders(New Border)
+            If stylesheet.Fonts Is Nothing Then stylesheet.Fonts = New Fonts(New Font)
+            If stylesheet.CellFormats Is Nothing Then stylesheet.CellFormats = New CellFormats(New CellFormat)
+
+            ' Step 1: A Fill holds a style
+            Dim fill As New Fill(New PatternFill(New ForegroundColor, New BackgroundColor))
+            'fill.PatternFill.ForegroundColor.Rgb = HexBinaryValue.FromString("FF1281F3")
+            fill.PatternFill.BackgroundColor.Rgb = HexBinaryValue.FromString("FFDCF7FF")
+            fill.PatternFill.PatternType = PatternValues.Solid
+            stylesheet.Fills.Append(fill)
+
+            'borders are created and stored separately
+            Dim bottomBorder As New BottomBorder
+            bottomBorder.Style = BorderStyleValues.Thin
+            bottomBorder.Color = New Color()
+            bottomBorder.Color.Rgb = HexBinaryValue.FromString("00000000")
+            stylesheet.Borders.Append(New Border(bottomBorder))
+
+            'same goes for fonts
+            Dim font As New Font
+            font.FontSize = New FontSize()
+            font.FontSize.Val = 14
+            font.FontName = New FontName
+            font.FontName.Val = "Times New Roman"
+            font.Color = New Color
+            font.Color.Rgb = HexBinaryValue.FromString("00000000")
+            stylesheet.Fonts.Append(font)
+
+            ' Step 2 CellFormat is how you cross reference a fill/border to a cell
+            stylesheet.Save()
+            Dim fillId As UInteger = 1 '(stylesheet.Fills.Count.Value - 1)
+            Dim borderId As UInteger = 1 'stylesheet.Borders.Count.Value - 1
+            Dim fontId As UInteger = 1 'stylesheet.Fonts.Count.Value - 1
+
+            Dim cellFormat As New CellFormat()
+            cellFormat.BorderId = borderId
+            cellFormat.FillId = fillId
+            cellFormat.FontId = fontId
+            cellFormat.ApplyFill = True
+            stylesheet.CellFormats.AppendChild(cellFormat)
+
+            ' store this id, so you don't have to look it up later
+            headerStyleIndexId = 1 '(stylesheet.CellFormats.Count.Value - 1)
+
+            'for more options, read pages 73-79 of "Open XML - the markup explained"
+        End Sub
+
 #End Region
 
     End Class
